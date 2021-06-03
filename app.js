@@ -1,25 +1,32 @@
 import dotenv from 'dotenv'
-import koa from 'koa'
+import Koa from 'koa'
 import KoaRouter from 'koa-router'
 import json from 'koa-json'
-import KoaStatic from 'koa-static'
-import send from 'koa-send'
-import Body from 'koa-body'
-const app = new koa()
+import koaStatic from 'koa-static'
+import staticRouter from "./routes/staticFile.js"
+import middleRouter from "./routes/useMiddle.js"
+import bodyRouter from "./routes/useBody.js"
+const app = new Koa()
 const router = new KoaRouter()
 
 dotenv.config()
 app.use(json())
+app.use(staticRouter.routes())
+app.use(staticRouter.allowedMethods())
+app.use(middleRouter.routes())
+app.use(middleRouter.allowedMethods())
+app.use(bodyRouter.routes())
+app.use(bodyRouter.allowedMethods())
 app.use(router.routes())
 app.use(router.allowedMethods())
 
+
 // Server static file
-app.use(KoaStatic('public')) 
+app.use(koaStatic('public')) 
 
 app.keys = ["cookies"] // use app.keys
 
 // cascading
-
 app.use(async (ctx, next) => {
     console.log(1);
     ctx.cookies.set("token", "this is token", {signed: true})
@@ -48,39 +55,16 @@ app.use(async (ctx, next) => {
 
 app.use(async ctx => {
     ctx.body = {
-        message: "hohoh",
+        message: "test context",
         data: 123
     }
 })
 
-// Router SendFile from Server
-
-router.get("/me", async ctx => {
-    console.log(ctx.request.header.cookie.split("=")[1]);
-    let data = await send(ctx, "./public/me.html")
-})
-
 // Router response
-
 router.get("/home", async ctx => {
-    console.log(ctx.request.header.cookie.split("=")[1]);
     ctx.response.body = "<h1>This is home page</h1>"
-})
-
-// router use body
-router.post("/me", Body(), async ctx => {
-    try {
-        console.log(ctx.request.body);
-        ctx.response.body = ctx.request.body
-        ctx.response.message = "success"
-        console.log(ctx.response);
-        ctx.redirect("/")
-    } catch (error) {
-        console.log(error);
-    }
 })
 
 app.listen(process.env.PORT, () => {
     console.log(`connect to port ${process.env.PORT} successfuly!!`);
 })
-
